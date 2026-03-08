@@ -113,7 +113,15 @@ canvas { display:block; }
 #btnBreak { background:linear-gradient(135deg,#e85757,#c0392b); color:#fff; }
 #btnJump  { background:linear-gradient(135deg,#f5c842,#e67e22); color:#fff; font-size:18px; }
 #btnSit   { background:linear-gradient(135deg,#a29bfe,#6c5ce7); color:#fff; font-size:17px; }
-#btnFly   {
+#btnSaveMobile {
+  display:none;
+  position:fixed; left:16px; bottom:296px;
+  background:linear-gradient(135deg,#55efc4,#00b894); color:#fff; font-size:18px;
+  z-index:300;
+}
+@media(pointer:coarse),(max-width:700px){ #btnSaveMobile { display:flex; } }
+body.forceMobile #btnSaveMobile { display:flex !important; }
+#btnFly {
   display:none;
   position:fixed; left:16px; bottom:220px;
   background:linear-gradient(135deg,#81ecec,#00b894); color:#fff; font-size:18px;
@@ -121,9 +129,25 @@ canvas { display:block; }
 }
 #btnFly.active { background:linear-gradient(135deg,#00cec9,#006655); box-shadow:0 0 16px rgba(0,206,201,0.7); }
 @media(pointer:coarse),(max-width:700px){ #btnFly { display:flex; } }
+body.forceMobile #btnFly { display:flex !important; }
+#btnGrabBlock { background:linear-gradient(135deg,#74b9ff,#0984e3); color:#fff; font-size:18px; }
 #btnGrabBlock.grabbing { background:linear-gradient(135deg,#0984e3,#2d3436); box-shadow:0 0 14px rgba(9,132,227,0.7); }
 #btnGrabCloth { background:linear-gradient(135deg,#fd79a8,#e84393); color:#fff; font-size:18px; }
 #btnGrabCloth.grabbing { background:linear-gradient(135deg,#e84393,#6c0a3a); box-shadow:0 0 14px rgba(232,67,147,0.7); }
+
+/* save button */
+#btnSave {
+  position:fixed; top:14px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.65); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.2); border-radius:10px;
+  color:#fff; font-size:13px; font-weight:700;
+  padding:8px 14px; cursor:pointer; z-index:200;
+  user-select:none; -webkit-user-select:none;
+  transition:background .15s, transform .1s;
+  display:none;
+}
+#btnSave:hover { background:rgba(87,232,122,0.3); border-color:#57e87a; }
+#btnSave:active { transform:translateX(-50%) scale(.93); }
 
 /* cam drag zone */
 #camDragZone {
@@ -131,12 +155,39 @@ canvas { display:block; }
   width:60%; height:calc(100% - 185px); z-index:150;
 }
 
+/* splash screen */
+#splash {
+  position:fixed; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.82); backdrop-filter:blur(12px);
+  color:#fff; gap:18px; z-index:600;
+}
+#splash h1 { font-size:42px; letter-spacing:2px; font-weight:900; }
+#splash .sub { opacity:.7; font-size:14px; }
+.splashBtn {
+  width:240px; padding:14px 0; border-radius:14px; border:none;
+  font-size:16px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  transition:transform .1s, box-shadow .1s;
+  box-shadow:0 4px 18px rgba(0,0,0,0.4);
+}
+.splashBtn:hover  { transform:translateY(-2px); box-shadow:0 7px 24px rgba(0,0,0,0.5); }
+.splashBtn:active { transform:scale(.96); }
+#btnNewWorld  { background:linear-gradient(135deg,#57e87a,#27ae60); color:#fff; }
+#btnLoadWorld { background:linear-gradient(135deg,#74b9ff,#0984e3); color:#fff; }
+#btnMobilePC  { background:linear-gradient(135deg,#a29bfe,#6c5ce7); color:#fff; }
+#splash .hint { font-size:11px; opacity:.4; margin-top:4px; }
+
 @media(pointer:coarse),(max-width:700px){
   #joystickZone { display:block; }
   #actionBtns   { display:flex; }
   #camDragZone  { display:block; }
-  #lockMsg      { display:none !important; }
 }
+/* force mobile UI on desktop when toggled */
+body.forceMobile #joystickZone { display:block !important; }
+body.forceMobile #actionBtns   { display:flex  !important; }
+body.forceMobile #camDragZone  { display:block !important; }
+body.forceMobile #lockMsg      { display:none  !important; }
 </style>
 </head>
 <body>
@@ -148,21 +199,35 @@ canvas { display:block; }
   <h3>🧣 SilkyWorld</h3>
   WASD: <b>Mover</b> · Space: <b>Saltar</b> · G: <b>Sentarse</b> · E: <b>Agarrar bloque</b> · R: <b>Agarrar tela/remera</b><br>
   F: <b>Cámara</b> · <b>V: Fly</b> (Space↑ G↓) · <b>Click der / ✅ con remera = Equipar 👕</b> · Q: Quitar<br>
-  Click <b>der</b>: Colocar · Click <b>izq</b>: Borrar<br>
+  Click <b>der</b>: Colocar · Click <b>izq</b>: Borrar · <b>Ctrl+S</b>: Guardar<br>
   Rueda / 1-9: <b>Cambiar bloque</b><br>
   Click en tela: <b>¡Lanzar!</b> 🎈
 </div>
 
+<button id="btnSave" onclick="saveWorld()">💾 Guardar mundo</button>
+<input type="file" id="fileInput" accept=".silky" style="display:none">
+
+<!-- Splash screen -->
+<div id="splash">
+  <div style="font-size:52px;">🧣</div>
+  <h1>SilkyWorld</h1>
+  <div class="sub">Construye, lanza telas y vuela</div>
+  <button class="splashBtn" id="btnNewWorld"  onclick="startNewWorld()">🌍 Nuevo Mundo</button>
+  <button class="splashBtn" id="btnLoadWorld" onclick="document.getElementById('fileInput').click()">📂 Cargar Mundo</button>
+  <button class="splashBtn" id="btnMobilePC"  onclick="toggleMobileOnPC()">📱 Controles Mobile</button>
+  <div class="hint">Los mundos guardados tienen extensión .silky</div>
+</div>
+
+<!-- lockMsg para pointer lock en PC (se muestra al salir del puntero) -->
 <div id="lockMsg" style="
-  position:fixed;inset:0;display:flex;flex-direction:column;
+  position:fixed;inset:0;display:none;flex-direction:column;
   align-items:center;justify-content:center;
   background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
   color:#fff;gap:14px;z-index:500;pointer-events:none;
 ">
   <div style="font-size:52px;">🧣</div>
   <div style="font-weight:800;font-size:24px;letter-spacing:1px;">SilkyWorld</div>
-  <div style="opacity:.8;font-size:15px;">Haz clic para entrar al mundo</div>
-  <div style="opacity:.5;font-size:12px;margin-top:2px;">WASD · Espacio saltar · Click construir · Click tela = lanzar · F = cámara · G = sentarse</div>
+  <div style="opacity:.8;font-size:15px;">Haz clic para continuar</div>
 </div>
 
 <div id="toolbar">
@@ -185,6 +250,7 @@ canvas { display:block; }
   <div class="bBtn" onclick="selectSlot(16,this)">👕<span>Remera🟡</span></div>
 </div>
 
+<button class="actBtn" id="btnSaveMobile">💾</button>
 <button class="actBtn" id="btnFly">🪂</button>
 <div id="joystickZone"><div id="joystickBase"><div id="joystickKnob"></div></div></div>
 <div id="actionBtns">
@@ -1265,11 +1331,182 @@ updateCam();
 // POINTER LOCK
 // ═══════════════════════════════════════════════════════════
 var pointerLocked=false;
-canvas.addEventListener('click',()=>{if(!pointerLocked)canvas.requestPointerLock();});
+var gameStarted=false;
+
+// ── Splash / New World / Load / Mobile toggle ──────────────
+function enterGame(){
+  document.getElementById('splash').style.display='none';
+  document.getElementById('btnSave').style.display='';
+  gameStarted=true;
+  // On touch/mobile: no pointer lock needed
+  if(window.matchMedia('(pointer:coarse)').matches || document.body.classList.contains('forceMobile')) return;
+  canvas.requestPointerLock();
+}
+
+function startNewWorld(){
+  // Clear world except floor
+  Object.keys(worldBlocks).forEach(k=>{
+    const e=worldBlocks[k];
+    if(e.isCloth&&e.clothObj) scene.remove(e.clothObj.group||e.clothObj.mesh||new THREE.Object3D());
+    else if(e.mesh) scene.remove(e.mesh);
+    delete worldBlocks[k];
+  });
+  clothObjects.length=0; shirtObjects.length=0; toyBlocks.length=0;
+  collCache=null;
+  for(let x=0;x<16;x++) for(let z=0;z<16;z++) placeBlock(x,0,z,'grass');
+  enterGame();
+}
+
+function saveWorld(){
+  const data={v:2, blocks:[], cloths:[], shirts:[], toys:[], equipped:{}};
+
+  // Bloques sólidos
+  for(const [key,entry] of Object.entries(worldBlocks)){
+    if(entry.isCloth) continue;
+    const [x,y,z]=key.split(',').map(Number);
+    data.blocks.push([x,y,z,entry.type]);
+  }
+
+  // Telas en el suelo
+  for(const co of clothObjects){
+    data.cloths.push([co.gridX,co.gridY,co.gridZ,co.type]);
+  }
+
+  // Remeras en el suelo
+  for(const so of shirtObjects){
+    data.shirts.push([so.gridX,so.gridY,so.gridZ,so.type]);
+  }
+
+  // Bloques de juguete (posición exacta en mundo)
+  for(const tb of toyBlocks){
+    const p=tb.mesh.position;
+    data.toys.push([p.x,p.y,p.z,tb.type]);
+  }
+
+  // Equipamiento actual
+  if(equippedShirt) data.equipped.shirt=equippedShirt.type;
+  if(equippedCape)  data.equipped.cape =equippedCape.mesh.material.color.getHex();
+
+  const blob=new Blob([JSON.stringify(data)],{type:'application/octet-stream'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mundo.silky';
+  a.click();
+}
+
+function loadWorldFromData(data){
+  if(!data||!data.v) return alert('Archivo .silky inválido');
+
+  // Limpiar mundo actual
+  Object.keys(worldBlocks).forEach(k=>{
+    const e=worldBlocks[k];
+    if(e.isCloth&&e.clothObj) scene.remove(e.clothObj.group||new THREE.Object3D());
+    else if(e.mesh) scene.remove(e.mesh);
+    delete worldBlocks[k];
+  });
+  toyBlocks.forEach(tb=>scene.remove(tb.mesh));
+  clothObjects.length=0; shirtObjects.length=0; toyBlocks.length=0;
+  unequipShirt(); unequipCape();
+  collCache=null;
+
+  // Restaurar bloques sólidos
+  (data.blocks||[]).forEach(([x,y,z,type])=>placeBlock(x,y,z,type));
+
+  // Restaurar telas
+  (data.cloths||[]).forEach(([x,y,z,type])=>placeBlock(x,y,z,type));
+
+  // Restaurar remeras
+  (data.shirts||[]).forEach(([x,y,z,type])=>placeBlock(x,y,z,type));
+
+  // Restaurar bloques de juguete
+  (data.toys||[]).forEach(([wx,wy,wz,type])=>{
+    const mesh=new THREE.Mesh(
+      new THREE.BoxGeometry(BS*0.9,BS*0.9,BS*0.9), makeBlockMats(type)
+    );
+    mesh.position.set(wx,wy,wz);
+    mesh.castShadow=mesh.receiveShadow=true;
+    scene.add(mesh);
+    toyBlocks.push({mesh,vx:0,vy:0,vz:0,onGround:true,type,snapQ:new THREE.Quaternion()});
+  });
+
+  // Restaurar equipamiento
+  if(data.equipped){
+    if(data.equipped.shirt){
+      // Recolorear cuerpo directamente (no hay objeto shirt para equipar)
+      const col=shirtPalette[data.equipped.shirt]||0x3A7BD5;
+      torsoMat.color.setHex(col);
+      armUpperMats.forEach(m=>m.color.setHex(col));
+      equippedShirt={type:data.equipped.shirt,color:col}; // stub liviano
+    }
+    if(data.equipped.cape){
+      // Crear capa con el color guardado directamente
+      const stub={W:20,H:20,sp:BS*0.05,gridX:0,gridY:0,gridZ:'saved',
+                  group:{children:[{material:{color:{getHex:()=>data.equipped.cape}}}]}};
+      // Reemplazar color reader para que buildWornShirt-like use el hex directamente
+      const savedColor=data.equipped.cape;
+      if(equippedCape){scene.remove(equippedCape.mesh);equippedCape=null;}
+      const W=CAPE_W,H=CAPE_H,sp=CAPE_SP;
+      const pts=[];
+      for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+        pts.push({x:px,y:feetY+PH,z:pz,vx:0,vy:0,vz:0,pinned:r===0});
+      }
+      const constraints=[];
+      for(let r=0;r<H;r++) for(let c=0;c<W;c++){
+        const i=r*W+c;
+        if(c<W-1) constraints.push({a:i,b:i+1,rest:sp});
+        if(r<H-1) constraints.push({a:i,b:i+W,rest:sp});
+        if(c<W-1&&r<H-1){
+          constraints.push({a:i,b:i+W+1,rest:sp*1.414});
+          constraints.push({a:i+1,b:i+W,rest:sp*1.414});
+        }
+      }
+      const posArr=new Float32Array(W*H*3),nrmArr=new Float32Array(W*H*3),idxArr=[];
+      for(let r=0;r<H-1;r++) for(let c=0;c<W-1;c++){
+        const i=r*W+c; idxArr.push(i,i+W,i+1,i+1,i+W,i+W+1);
+      }
+      const geo2=new THREE.BufferGeometry();
+      geo2.setAttribute('position',new THREE.BufferAttribute(posArr,3));
+      geo2.setAttribute('normal',new THREE.BufferAttribute(nrmArr,3));
+      geo2.setIndex(idxArr);
+      const mat2=new THREE.MeshPhongMaterial({color:savedColor,side:THREE.DoubleSide,shininess:80,specular:0xffffff});
+      const mesh2=new THREE.Mesh(geo2,mat2);
+      mesh2.castShadow=true;
+      scene.add(mesh2);
+      equippedCape={geo:geo2,mesh:mesh2,pts,W,H,sp,constraints,t:0};
+    }
+  }
+
+  enterGame();
+}
+
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{ loadWorldFromData(JSON.parse(ev.target.result)); }
+    catch(err){ alert('Error al leer el archivo'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+
+var mobileOnPC=false;
+function toggleMobileOnPC(){
+  mobileOnPC=!mobileOnPC;
+  document.body.classList.toggle('forceMobile',mobileOnPC);
+  document.getElementById('btnMobilePC').textContent=mobileOnPC?'🖥 Modo PC':'📱 Controles Mobile';
+  enterGame();
+}
+
+canvas.addEventListener('click',()=>{
+  if(!gameStarted||pointerLocked||mobileOnPC) return;
+  canvas.requestPointerLock();
+});
 document.addEventListener('pointerlockchange',()=>{
   pointerLocked=document.pointerLockElement===canvas;
   document.getElementById('info').style.display   =pointerLocked?'none':'';
-  document.getElementById('lockMsg').style.display=pointerLocked?'none':'flex';
+  if(!gameStarted) return;
+  document.getElementById('lockMsg').style.display=pointerLocked||mobileOnPC?'none':'flex';
 });
 document.addEventListener('mousemove',e=>{
   if(!pointerLocked)return;
@@ -1284,7 +1521,8 @@ document.addEventListener('mousemove',e=>{
 const keys={};
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;
-  // 1-9 → select block slot
+  // Ctrl+S → guardar mundo
+  if(e.code==='KeyS' && e.ctrlKey){ e.preventDefault(); saveWorld(); return; }
   if(e.code.startsWith('Digit')){
     const n=parseInt(e.key,10)-1;
     if(n>=0&&n<BLOCK_TYPES.length) selectSlot(n);
@@ -2193,6 +2431,7 @@ window.addEventListener('touchend',e=>{
 
 document.getElementById('btnPlace').addEventListener('touchstart',e=>{e.preventDefault();doPlace(innerWidth/2,innerHeight/2);},{passive:false});
 document.getElementById('btnBreak').addEventListener('touchstart',e=>{e.preventDefault();doBreak(innerWidth/2,innerHeight/2);},{passive:false});
+document.getElementById('btnSaveMobile').addEventListener('touchstart',e=>{e.preventDefault();saveWorld();},{passive:false});
 document.getElementById('btnFly').addEventListener('touchstart',  e=>{e.preventDefault();toggleFly();},{passive:false});
 document.getElementById('btnJump').addEventListener('touchstart',  e=>{e.preventDefault(); if(isFlying){flyUp=true;}else{doJump();}  },{passive:false});
 document.getElementById('btnJump').addEventListener('touchend',    e=>{e.preventDefault(); flyUp=false;  },{passive:false});
