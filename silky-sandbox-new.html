@@ -155,7 +155,25 @@ body.forceMobile #btnFly { display:flex !important; }
   width:60%; height:calc(100% - 185px); z-index:150;
 }
 
-/* splash screen */
+/* pause menu */
+#pauseMenu {
+  position:fixed; inset:0; display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.72); backdrop-filter:blur(10px);
+  color:#fff; gap:16px; z-index:500;
+}
+#pauseMenu h2 { font-size:28px; font-weight:900; letter-spacing:1px; margin-bottom:4px; }
+#pauseMenu .pauseBtn {
+  width:220px; padding:13px 0; border-radius:13px; border:none;
+  font-size:15px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  transition:transform .1s, box-shadow .1s;
+  box-shadow:0 4px 16px rgba(0,0,0,0.4);
+}
+#pauseMenu .pauseBtn:hover  { transform:translateY(-2px); box-shadow:0 7px 22px rgba(0,0,0,0.5); }
+#pauseMenu .pauseBtn:active { transform:scale(.95); }
+#btnPauseContinue { background:linear-gradient(135deg,#f5c842,#e67e22); color:#fff; }
+#btnPauseSave     { background:linear-gradient(135deg,#57e87a,#27ae60); color:#fff; }
 #splash {
   position:fixed; inset:0; display:flex; flex-direction:column;
   align-items:center; justify-content:center;
@@ -218,17 +236,16 @@ body.forceMobile #lockMsg      { display:none  !important; }
   <div class="hint">Los mundos guardados tienen extensión .silky</div>
 </div>
 
-<!-- lockMsg para pointer lock en PC (se muestra al salir del puntero) -->
-<div id="lockMsg" style="
-  position:fixed;inset:0;display:none;flex-direction:column;
-  align-items:center;justify-content:center;
-  background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
-  color:#fff;gap:14px;z-index:500;pointer-events:none;
-">
-  <div style="font-size:52px;">🧣</div>
-  <div style="font-weight:800;font-size:24px;letter-spacing:1px;">SilkyWorld</div>
-  <div style="opacity:.8;font-size:15px;">Haz clic para continuar</div>
+<!-- Menú de pausa en PC (se muestra al salir del pointer lock) -->
+<div id="pauseMenu">
+  <div style="font-size:44px;">🧣</div>
+  <h2>Pausado</h2>
+  <button class="pauseBtn" id="btnPauseContinue" onclick="resumeGame()">▶ Continuar</button>
+  <button class="pauseBtn" id="btnPauseSave"     onclick="saveWorld()">💾 Guardar mundo</button>
 </div>
+
+<!-- lockMsg legacy (oculto, no se usa) -->
+<div id="lockMsg" style="display:none;"></div>
 
 <div id="toolbar">
   <div class="bBtn active" onclick="selectSlot(0,this)"><span class="knum">1</span>🌿<span>Pasto</span></div>
@@ -301,6 +318,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 renderer.setClearColor(0x87CEEB);
 
+
+
+
 const scene = new THREE.Scene();
 scene.fog   = new THREE.FogExp2(0x87CEEB, 0.032);
 
@@ -331,7 +351,7 @@ for(let i=0;i<10;i++){
   for(let j=0;j<3+Math.floor(Math.random()*4);j++){
     const m=new THREE.Mesh(
       new THREE.BoxGeometry((1.2+Math.random()*1.4)*BS,(0.5+Math.random()*.4)*BS,(0.8+Math.random()*.8)*BS),
-      new THREE.MeshLambertMaterial({color:0xFFFFFF,transparent:true,opacity:.88})
+      new THREE.MeshPhongMaterial({color:0xFFFFFF,transparent:true,opacity:.88,shininess:40,specular:0x2a2a2a})
     );
     m.position.set(j*1.1*BS-1.4*BS,Math.random()*.25*BS,Math.random()*.25*BS);
     g.add(m);
@@ -357,10 +377,22 @@ const blockDefs={
 const clothPalette={cloth_red:0xFF4444,cloth_blue:0x4488FF,cloth_yellow:0xFFDD33};
 const shirtPalette={shirt_white:0xEEEEEE,shirt_red:0xDD3333,shirt_blue:0x2266DD,shirt_yellow:0xFFCC00};
 
+function plasticMat(col, alpha){
+  const transparent = alpha!=null && alpha<1;
+  return new THREE.MeshPhongMaterial({
+    color: col,
+    shininess: 35,
+    specular: 0x222222,
+    transparent, opacity: alpha||1
+  });
+}
 function makeBlockMats(type){
-  const d=blockDefs[type],a=d.alpha||1;
-  const mk=col=>new THREE.MeshLambertMaterial({color:col,transparent:a<1,opacity:a});
-  return[mk(d.side),mk(d.side),mk(d.top),mk(d.bottom),mk(d.side),mk(d.side)];
+  const d=blockDefs[type], a=d.alpha||1;
+  return [
+    plasticMat(d.side,a), plasticMat(d.side,a),
+    plasticMat(d.top, a), plasticMat(d.bottom,a),
+    plasticMat(d.side,a), plasticMat(d.side,a)
+  ];
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -493,7 +525,7 @@ for(let x=0;x<16;x++)for(let z=0;z<16;z++)placeBlock(x,0,z,'grass');
 function placeCloth(gx,gy,gz,type){
   const key=gk(gx,gy,gz);
   const color=clothPalette[type];
-  const W=20,H=20,sp=BS*0.05;          // 20×20 — máxima suavidad
+  const W=26,H=26,sp=BS*0.038;          // 26×26 — alta resolución
   const surfaceY=(gy+1)*BS + 0.004;
   const spawnY  = surfaceY + BS*0.7;  // drop from above
 
@@ -526,7 +558,7 @@ function placeCloth(gx,gy,gz,type){
   // MeshPhongMaterial: permite smooth shading sedoso con specular highlight
   const mat=new THREE.MeshPhongMaterial({
     color, side:THREE.DoubleSide, transparent:true, opacity:.93, depthWrite:false,
-    shininess:80, specular:0xffffff
+    shininess:40, specular:0x2a2a2a
   });
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;
   const group=new THREE.Group();group.add(mesh);
@@ -625,7 +657,7 @@ function tickCloth(co,dt){
     p.vz += wz*3.5*dt;
 
     // Cartoon gravity: slightly exaggerated
-    p.vy += -26*BS*dt;
+    p.vy += -10*BS*dt;
 
     // Self-ironing: gently pull flat once settled (cartoon smooth)
     if(iron>0){
@@ -651,10 +683,10 @@ function tickCloth(co,dt){
     const flY=clothFloorAt(p.x,p.z);
     if(p.y<flY){
       p.y=flY;
-      // Cartoon bounce: squash downward velocity, preserve & boost horizontal
       if(p.vy<-BS*0.5){
-        p.vx+=(Math.random()-.5)*BS*2;   // splat spread
+        p.vx+=(Math.random()-.5)*BS*2;
         p.vz+=(Math.random()-.5)*BS*2;
+        
       }
       p.vy*=-bounceFactor;
       p.vx*=0.55; p.vz*=0.55;
@@ -708,6 +740,10 @@ function tickCloth(co,dt){
   }
 
   if(iron>0) co.freefall=false;
+  // Settle sound: primera vez que iron llega a full
+
+  // Reset flags al volar de nuevo
+
 
   // Upload positions
   const pos=geo.attributes.position.array;
@@ -740,11 +776,18 @@ function tickCloth(co,dt){
 function throwCloth(co){
   co.freefall=true;
   co.ironTimer=0;
+
+
+  // Squash & stretch: impulso hacia afuera desde el centro
+  const cx=co.pts[Math.floor(co.H/2)][Math.floor(co.W/2)];
   for(let r=0;r<co.H;r++)for(let c=0;c<co.W;c++){
     co.pts[r][c].pinned=false;
-    co.pts[r][c].vy=BS*(20+Math.random()*12);
-    co.pts[r][c].vx=(Math.random()-.5)*BS*18;
-    co.pts[r][c].vz=(Math.random()-.5)*BS*18;
+    const p=co.pts[r][c];
+    const dx=p.x-(cx?cx.x:p.x), dz=p.z-(cx?cx.z:p.z);
+    const d=Math.sqrt(dx*dx+dz*dz)||0.001;
+    p.vy=BS*(20+Math.random()*12);
+    p.vx=(Math.random()-.5)*BS*18 + dx/d*BS*6;  // stretch outward
+    p.vz=(Math.random()-.5)*BS*18 + dz/d*BS*6;
   }
 }
 
@@ -839,7 +882,7 @@ function placeShirt(gx,gy,gz,type){
   geo.setIndex(idx);
   const mat=new THREE.MeshPhongMaterial({
     color,side:THREE.DoubleSide,transparent:true,opacity:.97,
-    shininess:55,specular:0x888888
+    shininess:40,specular:0x2a2a2a
   });
   const mesh=new THREE.Mesh(geo,mat); mesh.castShadow=true;
   const group=new THREE.Group(); group.add(mesh); scene.add(group);
@@ -919,13 +962,15 @@ function tickShirt(so,dt){
     pts[L].forEach(p=>{
       if(p.pinned) return;
       p.vx+=wx*2.5*dt; p.vz+=wz*2.5*dt;
-      p.vy+=-26*BS*dt;
+      p.vy+=-10*BS*dt;
       p.vx*=damp; p.vy*=damp; p.vz*=damp;
       p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt;
       const flY=clothFloorAt(p.x,p.z);
       if(p.y<flY){
         p.y=flY;
-        if(p.vy<-BS*0.4){p.vx+=(Math.random()-.5)*BS*1.0;p.vz+=(Math.random()-.5)*BS*1.0;}
+        if(p.vy<-BS*0.4){p.vx+=(Math.random()-.5)*BS*1.0;p.vz+=(Math.random()-.5)*BS*1.0;
+          
+        }
         p.vy*=-bounceFactor; p.vx*=0.55; p.vz*=0.55;
       }
     });
@@ -974,6 +1019,8 @@ function tickShirt(so,dt){
   }
 
   if(settled>0.5&&!hasPinned) so.freefall=false;
+
+
 
   // ── Colisión jugador → remera (cilindro completo) ──────────
   // El jugador empuja partículas que estén dentro de su radio
@@ -1109,7 +1156,7 @@ if(false){function _unused_old_shirt_placeholder(){
   geo.setAttribute('position',new THREE.BufferAttribute(posArr,3));
   geo.setIndex(idx);
   geo.computeVertexNormals();
-  const mat=new THREE.MeshPhongMaterial({color,side:THREE.DoubleSide,shininess:65,specular:0x999999});
+  const mat=new THREE.MeshPhongMaterial({color,side:THREE.DoubleSide,shininess:40,specular:0x2a2a2a});
   const mesh=new THREE.Mesh(geo,mat);
   mesh.castShadow=true;
   return {mesh,geo,verts,N,cells,cellMap,thick,sc};
@@ -1137,12 +1184,13 @@ const VIEW_DIST=[0, BS*5, BS*5];
 const playerGroup=new THREE.Group();
 scene.add(playerGroup);
 
-const skinCol =0xF4C28A, shirtCol=0x3A7BD5, pantsCol=0x2C3E7A, shoeCol=0x222222;
+const skinCol=0xF4C28A, shirtCol=0x3A7BD5, pantsCol=0x2C3E7A, shoeCol=0x222222;
+const mkPlastic=(col)=>new THREE.MeshPhongMaterial({color:col,shininess:45,specular:0x333333});
 
 // — HEAD —
 const headMesh=new THREE.Mesh(
   new THREE.BoxGeometry(BS*.72,BS*.72,BS*.72),
-  new THREE.MeshLambertMaterial({color:skinCol})
+  mkPlastic(skinCol)
 );
 headMesh.position.y=PH-BS*.36; // center of head = top of body
 headMesh.castShadow=true;
@@ -1152,7 +1200,7 @@ playerGroup.add(headMesh);
 function faceDecal(ox,oy,oz,w,h,col){
   const m=new THREE.Mesh(
     new THREE.BoxGeometry(w,h,0.01),
-    new THREE.MeshLambertMaterial({color:col})
+    mkPlastic(col)
   );
   m.position.set(ox,oy,oz);
   headMesh.add(m);
@@ -1165,7 +1213,7 @@ faceDecal(0,-BS*.1,-BS*.365, BS*.22, BS*.05, 0xCC4444);        // mouth
 // — TORSO —
 const torsoMesh=new THREE.Mesh(
   new THREE.BoxGeometry(BS*.7,BS*.75,BS*.38),
-  new THREE.MeshLambertMaterial({color:shirtCol})
+  mkPlastic(shirtCol)
 );
 torsoMesh.position.y=PH-BS*.36-BS*.36-BS*.375; // below head
 torsoMesh.castShadow=true;
@@ -1177,12 +1225,12 @@ function makeArm(side){ // side: +1 right, -1 left
   pivot.position.set(side*(BS*.35+BS*.18), PH-BS*.36-BS*.36-BS*.05, 0);
   const upper=new THREE.Mesh(
     new THREE.BoxGeometry(BS*.28,BS*.45,BS*.28),
-    new THREE.MeshLambertMaterial({color:shirtCol})
+    mkPlastic(shirtCol)
   );
   upper.position.y=-BS*.225;
   const lower=new THREE.Mesh(
     new THREE.BoxGeometry(BS*.26,BS*.4,BS*.26),
-    new THREE.MeshLambertMaterial({color:skinCol})
+    mkPlastic(skinCol)
   );
   lower.position.y=-BS*.225-BS*.42;
   pivot.add(upper,lower);
@@ -1199,12 +1247,12 @@ function makeLeg(side){
   pivot.position.set(side*BS*.18, PH-BS*.36-BS*.36-BS*.75+BS*.05, 0);
   const upper=new THREE.Mesh(
     new THREE.BoxGeometry(BS*.3,BS*.48,BS*.3),
-    new THREE.MeshLambertMaterial({color:pantsCol})
+    mkPlastic(pantsCol)
   );
   upper.position.y=-BS*.24;
   const lower=new THREE.Mesh(
     new THREE.BoxGeometry(BS*.28,BS*.42,BS*.32),
-    new THREE.MeshLambertMaterial({color:shoeCol})
+    mkPlastic(shoeCol)
   );
   lower.position.y=-BS*.24-BS*.45;
   pivot.add(upper,lower);
@@ -1227,16 +1275,16 @@ const fpArmGroup=new THREE.Group();
 
 const fpUpper=new THREE.Mesh(
   new THREE.BoxGeometry(0.065,0.19,0.065),
-  new THREE.MeshLambertMaterial({color:shirtCol})
+  mkPlastic(shirtCol)
 );
 const fpLower=new THREE.Mesh(
   new THREE.BoxGeometry(0.060,0.17,0.060),
-  new THREE.MeshLambertMaterial({color:skinCol})
+  mkPlastic(skinCol)
 );
 fpLower.position.y=-0.175;
 const fpHand=new THREE.Mesh(
   new THREE.BoxGeometry(0.075,0.075,0.075),
-  new THREE.MeshLambertMaterial({color:skinCol})
+  mkPlastic(skinCol)
 );
 fpHand.position.y=-0.175-0.08;
 
@@ -1468,7 +1516,7 @@ function loadWorldFromData(data){
       geo2.setAttribute('position',new THREE.BufferAttribute(posArr,3));
       geo2.setAttribute('normal',new THREE.BufferAttribute(nrmArr,3));
       geo2.setIndex(idxArr);
-      const mat2=new THREE.MeshPhongMaterial({color:savedColor,side:THREE.DoubleSide,shininess:80,specular:0xffffff});
+      const mat2=new THREE.MeshPhongMaterial({color:savedColor,side:THREE.DoubleSide,shininess:40,specular:0x2a2a2a});
       const mesh2=new THREE.Mesh(geo2,mat2);
       mesh2.castShadow=true;
       scene.add(mesh2);
@@ -1498,15 +1546,20 @@ function toggleMobileOnPC(){
   enterGame();
 }
 
+function resumeGame(){
+  document.getElementById('pauseMenu').style.display='none';
+  canvas.requestPointerLock();
+}
+
 canvas.addEventListener('click',()=>{
   if(!gameStarted||pointerLocked||mobileOnPC) return;
   canvas.requestPointerLock();
 });
 document.addEventListener('pointerlockchange',()=>{
   pointerLocked=document.pointerLockElement===canvas;
-  document.getElementById('info').style.display   =pointerLocked?'none':'';
-  if(!gameStarted) return;
-  document.getElementById('lockMsg').style.display=pointerLocked||mobileOnPC?'none':'flex';
+  document.getElementById('info').style.display=pointerLocked?'none':'';
+  if(!gameStarted||mobileOnPC) return;
+  document.getElementById('pauseMenu').style.display=pointerLocked?'none':'flex';
 });
 document.addEventListener('mousemove',e=>{
   if(!pointerLocked)return;
@@ -1646,7 +1699,7 @@ function buildWornShirt(color){
   geo.computeVertexNormals();
 
   const mat=new THREE.MeshPhongMaterial({
-    color, side:THREE.DoubleSide, shininess:60, specular:0xffffff,
+    color, side:THREE.DoubleSide, shininess:40, specular:0x2a2a2a,
     transparent:true, opacity:0.97
   });
   const mesh=new THREE.Mesh(geo,mat);
@@ -1687,7 +1740,7 @@ function tickWornShirt(dt){
   for(let i=W;i<W*H;i++){
     const p=pts[i];
     p.vx+=wx*2*dt; p.vz+=wz*2*dt;
-    p.vy+=-22*BS*dt;
+    p.vy+=-8*BS*dt;
     p.vx*=damp; p.vy*=damp; p.vz*=damp;
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt;
     // Piso
@@ -1764,7 +1817,7 @@ function equipCape(co){
   geo.setIndex(idxArr);
 
   const mat=new THREE.MeshPhongMaterial({
-    color, side:THREE.DoubleSide, shininess:80, specular:0xffffff
+    color, side:THREE.DoubleSide, shininess:40, specular:0x2a2a2a
   });
   const mesh=new THREE.Mesh(geo,mat);
   mesh.castShadow=true;
@@ -2021,14 +2074,32 @@ function tryGrabCloth(){
   if(!bestCo) return;
 
   if(bestIsShirt){
+    // Preferir partícula interior: buscar la más cercana que tenga los 4 vecinos cardinales
+    const so=bestCo;
+    let bestInnerC=bestC, bestInnerDist=Infinity;
+    so.pts[0].forEach((p,i)=>{
+      const cel=so.cells[i];
+      if(!cel) return;
+      // Solo considerar si tiene los 4 vecinos (interior real)
+      const hasAll=['1,0','-1,0','0,1','0,-1'].every(
+        off=>{ const [dc,dr]=off.split(',').map(Number);
+               return so.cellMap[`${cel.c+dc},${cel.r+dr}`]!==undefined; });
+      if(!hasAll) return;
+      const dx=p.x-px,dy=p.y-(feetY+EYE_OFF),dz=p.z-pz;
+      const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(d<reach&&d<bestInnerDist){bestInnerDist=d;bestInnerC=i;}
+    });
+    bestC=bestInnerC;
     bestCo.pts[0][bestC].pinned=true;
-    bestCo.pts[1][bestC].pinned=true; // pinear ambas capas
+    bestCo.pts[1][bestC].pinned=true;
     grabbedObj={type:'cloth',clothObj:bestCo,pinR:0,pinC:bestC,isShirt:true};
     isGrabbing=true;
     bestCo.freefall=true; bestCo.ironTimer=0;
   } else {
-    // Always grab the top-center particle for a natural hold position
-    const pinR=0, pinC=Math.floor(bestCo.W/2);
+    // Clampear 2 partículas adentro del borde
+    const margin=2;
+    const pinR=Math.max(margin, Math.min(bestCo.H-1-margin, bestR));
+    const pinC=Math.max(margin, Math.min(bestCo.W-1-margin, bestC));
     bestCo.pts[pinR][pinC].pinned=true;
     grabbedObj={type:'cloth', clothObj:bestCo, pinR, pinC, isShirt:false};
     isGrabbing=true;
@@ -2330,6 +2401,7 @@ function doPlace(cx,cy){
     if(we.isShirt){
       const so=we.clothObj;
       so.freefall=true; so.ironTimer=0;
+    
       for(let L=0;L<2;L++) so.pts[L].forEach(p=>{
         p.pinned=false;
         p.vy=BS*(18+Math.random()*10);
