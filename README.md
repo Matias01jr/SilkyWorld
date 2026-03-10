@@ -1,5 +1,7 @@
 ### Nuevo
-- Nueva interfaz de inicio
+- Nueva interfaz de inicio con botón de nuevo mundo, cargar mundo y interfaz mobile (Para activar en ciertas PCs donde no funciona la de PC
+- Nueva interfaz de pausa con botón de continuar y guardar mundo
+- Nuevos cambios en la apariencia visual del mundo, ahora parece un poco más plástico
 - Ahora se pueden descargar/guardar los mundos con un nuevo botón en celular, o Ctrl+S en PC
 - Ya se pueden cargar mundos creados con la extensión .silky
 
