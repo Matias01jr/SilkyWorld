@@ -1,8 +1,16 @@
 ### Nuevo
 - Nueva interfaz de inicio con botón de nuevo mundo, cargar mundo y interfaz mobile (Para activar en ciertas PCs donde no funciona la de PC
-- Nueva interfaz de pausa con botón de continuar y guardar mundo
-- Nuevos cambios en la apariencia visual del mundo, ahora parece un poco más plástico
+- Nueva interfaz para elegir entre Creativo y Supervivecia
+- Nuevo modo Supervivencia
+- Puedes elegir el tamaño del mundo (Pero ojo, dependiendo del tamaño irá peor o mejor, tienes recomendaciones según el dispositivo que tengas, si va mal crea un mundo más pequeño)
+- Nuevo mob estilo Creeper, pero no explota, solo ataca
+- Nuevos cambios en la apariencia visual del mundo, ahora parece un poco más entre plástico y goma (tipo Roblox)
 - Ahora se pueden descargar/guardar los mundos con un nuevo botón en celular, o Ctrl+S en PC
+- Nuevo menú de pausa añadido (para los de PC)
+- Nuevo inventario ordenado (se abre con la tecla I)
+- Ya se ve bien el cuerpo del personaje en primera persona
+- Ya colisiona bien el personaje con los bloques
+- Nueva figurita del jugador en modo creativo (para decoración)
 - Ya se pueden cargar mundos creados con la extensión .silky
 
 # SilkyWorld
@@ -11,10 +19,11 @@ Una recreación de una versión sencilla de Minecraft hecho enteramente con Clau
 ## Cómo se juega
 ### PC:
 - WASD = Mover el personaje
-- Click izquierdo = Romper un bloque
+- Click izquierdo = Romper un bloque o atacar
 - Click derecho = Colocar un bloque, Tela o remera en el suelo
 - E = Agarrar un bloque con los dos brazos y llevarlo a otro lugar
-- R = Agarrar las Telas o Remeras
+- R = Agarrar las Telas, slimes o remeras
+- I = Abrir el inventario
 - F = Cambiar la perspectiva de jugador
 - G = Sentarse
 - V = Activar o desactivar modo Fly (Flotante)
@@ -31,6 +40,7 @@ Una recreación de una versión sencilla de Minecraft hecho enteramente con Clau
 - Joystick = Mueve el personaje
 - Inventario está abajo
 - Botón Paracaidas = activar modo Fly
+- Botón Mochila = Inventario
 - Botón Flecha arriba = Saltar
 - Botón visto verde = Colocar bloques, Telas o remeras en el suelo
 - Botón X = Quitar bloques
@@ -49,7 +59,8 @@ Una recreación de una versión sencilla de Minecraft hecho enteramente con Clau
 - En celular el personaje no puede volar hacia arriba mientras tiene equipado una tela como capa (No sucede en PC, próximamente parcheando)
 - La tela o el Toy Block puede irse arriba de un bloque que está como Techo (difícil de solucionar)
 - Problemas de rendimiento en dispositivos gama baja o antiguos (Depende del hardware)
-- El personaje atraviesa bloques colocados (Es necesario saltar para subirse arriba, esto no se puede arreglar de momento para que no suceda lo mismo de teletransporte hacia arriba como las telas debido a un bug)
+- La nueva mini figurita del personaje no se rota según el lado donde se coloque (Próximamente será parcheado)
+- El juego puede ir mal de rendimiento en mundos grandes en dispositivos no tan buenos (Próximamente se parcheará, mientras juega en mundos pequeños)
 - Otros bugs pequeños
 
 ## Items:
@@ -70,10 +81,13 @@ Una recreación de una versión sencilla de Minecraft hecho enteramente con Clau
 - Remera color Rojo
 - Remera color Azul
 - Remera color Amarillo
+- Slime de juguete
+- Bloque de Rebote
+- Creeper
 - Próximamente más...
 
 ### Cómo instalarlo:
-Simplemente descarga el código fuente y descomprímelo en una carpeta, abre el archivo .html y listo (No borres el otro archivo que viene con él ya que eso ocasionará que no vuelva a funcionar y tendrias que volver a descomprimirlo. Funciona en cualquier navegador moderno que soporte abrir archivos html (O puedes llevarlo a Electron sin problemas)
+Simplemente descarga la última release o el código fuente y descomprímelo en una carpeta, abre el archivo .html y listo (No borres el otro archivo que viene con él ya que eso ocasionará que no vuelva a funcionar y tendrias que volver a descomprimirlo. Funciona en cualquier navegador moderno que soporte abrir archivos html (O puedes llevarlo a Electron sin problemas)
 
 ## Créditos
 Este simulador de cubos es experimental, se intenta parecer un poco a Minecraft pero no plagiarlo directamente, sino solamente tomar su forma cúbica y convertirlo en algo para experimentar. Minecraft es una marca registrada y este juego no se relaciona directamente ni está afiliado directamente a él, Minecraft es propiedad de Mojang Studios, Microsoft Studios y Xbox games.
